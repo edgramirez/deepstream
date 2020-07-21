@@ -69,6 +69,7 @@ def osd_sink_pad_buffer_probe(pad, info, u_data):
             # in the C code, so the Python garbage collector will leave
             # it alone.
             frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
+            #print("Source id is ", frame_meta.source_id)
         except StopIteration:
             break
 
@@ -81,7 +82,9 @@ def osd_sink_pad_buffer_probe(pad, info, u_data):
                 obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
             except StopIteration:
                 break
+
             obj_counter[obj_meta.class_id] += 1
+            print("Id: ", obj_meta.object_id)
             try: 
                 l_obj = l_obj.next
             except StopIteration:
@@ -117,7 +120,7 @@ def osd_sink_pad_buffer_probe(pad, info, u_data):
         # set(red, green, blue, alpha); set to Black
         py_nvosd_text_params.text_bg_clr.set(0.0, 0.0, 0.0, 1.0)
         # Using pyds.get_string() to get display_text as string
-        print(pyds.get_string(py_nvosd_text_params.display_text))
+        #print('edgarrr', pyds.get_string(py_nvosd_text_params.display_text))
         pyds.nvds_add_display_meta_to_frame(frame_meta, display_meta)
         try:
             l_frame = l_frame.next
