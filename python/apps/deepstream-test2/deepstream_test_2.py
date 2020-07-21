@@ -74,15 +74,15 @@ def osd_sink_pad_buffer_probe(pad, info, u_data):
             break
 
         frame_number = frame_meta.frame_num
-        num_rects = frame_meta.num_obj_meta
         l_obj = frame_meta.obj_meta_list
+        num_rects = frame_meta.num_obj_meta
+
         while l_obj is not None:
             try:
                 # Casting l_obj.data to pyds.NvDsObjectMeta
                 obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
             except StopIteration:
                 break
-
             obj_counter[obj_meta.class_id] += 1
             print("Id: ", obj_meta.object_id)
             try: 
@@ -235,22 +235,22 @@ def main(args):
     config.sections()
 
     for key in config['tracker']:
-        if key == 'tracker-width':
+        elif key == 'tracker-width':
             tracker_width = config.getint('tracker', key)
             tracker.set_property('tracker-width', tracker_width)
-        if key == 'tracker-height':
+        elif key == 'tracker-height':
             tracker_height = config.getint('tracker', key)
             tracker.set_property('tracker-height', tracker_height)
-        if key == 'gpu-id':
+        elif key == 'gpu-id':
             tracker_gpu_id = config.getint('tracker', key)
             tracker.set_property('gpu_id', tracker_gpu_id)
-        if key == 'll-lib-file':
+        elif key == 'll-lib-file':
             tracker_ll_lib_file = config.get('tracker', key)
             tracker.set_property('ll-lib-file', tracker_ll_lib_file)
-        if key == 'll-config-file':
+        elif key == 'll-config-file':
             tracker_ll_config_file = config.get('tracker', key)
             tracker.set_property('ll-config-file', tracker_ll_config_file)
-        if key == 'enable-batch-process':
+        elif key == 'enable-batch-process':
             tracker_enable_batch_process = config.getint('tracker', key)
             tracker.set_property('enable_batch_process', tracker_enable_batch_process)
 
@@ -283,6 +283,7 @@ def main(args):
     srcpad = decoder.get_static_pad("src")
     if not srcpad:
         sys.stderr.write(" Unable to get source pad of decoder \n")
+
     srcpad.link(sinkpad)
     streammux.link(pgie)
     pgie.link(tracker)
@@ -291,6 +292,7 @@ def main(args):
     sgie2.link(sgie3)
     sgie3.link(nvvidconv)
     nvvidconv.link(nvosd)
+
     if is_aarch64():
         nvosd.link(transform)
         transform.link(sink)
