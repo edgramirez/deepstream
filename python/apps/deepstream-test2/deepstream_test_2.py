@@ -45,11 +45,11 @@ def osd_sink_pad_buffer_probe(pad, info, u_data):
     frame_number = 0
     # Intiallizing object counter with 0.
     obj_counter = {
-        PGIE_CLASS_ID_VEHICLE: 0,
-        PGIE_CLASS_ID_PERSON: 0,
-        PGIE_CLASS_ID_BICYCLE: 0,
-        PGIE_CLASS_ID_ROADSIGN: 0
-    }
+            PGIE_CLASS_ID_VEHICLE: 0,
+            PGIE_CLASS_ID_PERSON: 0,
+            PGIE_CLASS_ID_BICYCLE: 0,
+            PGIE_CLASS_ID_ROADSIGN: 0
+            }
     num_rects = 0
     gst_buffer = info.get_buffer()
     if not gst_buffer:
@@ -84,7 +84,15 @@ def osd_sink_pad_buffer_probe(pad, info, u_data):
             except StopIteration:
                 break
             obj_counter[obj_meta.class_id] += 1
-            print("Id: ", obj_meta.object_id)
+            # https://forums.developer.nvidia.com/t/custom-nvdsobjectmeta-in-python/125690
+            #pyds.nvds_acquire_meta_lock(batch_meta)
+            #frame_meta.bInferDone = True
+            #obj_meta = pyds.nvds_acquire_obj_meta_from_pool(batch_meta)
+            #obj_meta.rect_params.top = y - (h / 2)
+            #obj_meta.rect_params.left = x - (w / 2)
+            #obj_meta.rect_params.width = w
+            #obj_meta.rect_params.height = h
+            print('frame number', frame_number, "Id: ", obj_meta.object_id, 'x', obj_meta.rect_params.left + (obj_meta.rect_params.width/2), 'y', obj_meta.rect_params.top + (obj_meta.rect_params.height/2))
             try: 
                 l_obj = l_obj.next
             except StopIteration:
@@ -235,7 +243,7 @@ def main(args):
     config.sections()
 
     for key in config['tracker']:
-        elif key == 'tracker-width':
+        if key == 'tracker-width':
             tracker_width = config.getint('tracker', key)
             tracker.set_property('tracker-width', tracker_width)
         elif key == 'tracker-height':
