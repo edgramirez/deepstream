@@ -107,11 +107,14 @@ def tiler_src_pad_buffer_probe(pad, info, u_data):
             except StopIteration:
                 break
             obj_counter[obj_meta.class_id] += 1
+            print("ID : ",obj_meta.object_id)    
             try: 
                 l_obj = l_obj.next
             except StopIteration:
                 break
-        print("ID : ",obj_meta.object_id)    
+        # Fin de While interno
+        
+        
         
         """display_meta=pyds.nvds_acquire_display_meta_from_pool(batch_meta)
         display_meta.num_labels = 1
