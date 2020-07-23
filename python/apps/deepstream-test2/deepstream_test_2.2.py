@@ -172,7 +172,8 @@ def main(args):
 
     # Source element for reading from the file
     print("Creating Source \n ")
-    source = Gst.ElementFactory.make("filesrc", "file-source")
+    source = Gst.ElementFactory.make("uridecodebin", "uri-decode-bin")
+    #source = Gst.ElementFactory.make("filesrc", "file-source")
     if not source:
         sys.stderr.write(" Unable to create Source \n")
 
@@ -279,8 +280,8 @@ def main(args):
 
     print("Adding elements to Pipeline \n")
     pipeline.add(source)
-    pipeline.add(h264parser)
-    pipeline.add(decoder)
+    #pipeline.add(h264parser)
+    #pipeline.add(decoder)
     pipeline.add(streammux)
     pipeline.add(pgie)
     pipeline.add(tracker)
@@ -297,8 +298,8 @@ def main(args):
     # file-source -> h264-parser -> nvh264-decoder ->
     # nvinfer -> nvvidconv -> nvosd -> video-renderer
     print("Linking elements in the Pipeline \n")
-    source.link(h264parser)
-    h264parser.link(decoder)
+    #source.link(h264parser)
+    #h264parser.link(decoder)
 
     sinkpad = streammux.get_request_pad("sink_0")
     if not sinkpad:
@@ -307,6 +308,8 @@ def main(args):
     if not srcpad:
         sys.stderr.write(" Unable to get source pad of decoder \n")
 
+    source.link(streammux)
+    
     srcpad.link(sinkpad)
     streammux.link(pgie)
     pgie.link(tracker)
