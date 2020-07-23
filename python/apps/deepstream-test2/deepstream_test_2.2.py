@@ -437,8 +437,8 @@ def main(args):
 
     print("Adding elements to Pipeline \n")
     #pipeline.add(source)
-    # uri_decode_bin sustituye a source
-    pipeline.add(uri_decode_bin)
+    # source_bin sustituye a source
+    # pipeline.add(source_bin)   Añadida dentro del for.
     #pipeline.add(h264parser)
     #pipeline.add(decoder)
     # pipeline.add(streammux) ya fue añadido al principio del main, antes del for de evaluación de videos
@@ -468,7 +468,8 @@ def main(args):
         sys.stderr.write(" Unable to get source pad of decoder \n")
 
     srcpad.link(sinkpad)    
-    uri_decode_bin.link(streammux)
+    #uri_decode_bin.link(streammux)
+    source_bin.link(streammux)
     streammux.link(pgie)
     pgie.link(tracker)
     tracker.link(sgie1)
