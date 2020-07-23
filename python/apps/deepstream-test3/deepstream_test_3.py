@@ -267,10 +267,13 @@ def main(args):
     pgie = Gst.ElementFactory.make("nvinfer", "primary-inference")
     if not pgie:
         sys.stderr.write(" Unable to create pgie \n")
-    print("Creating tiler \n ")
-    tiler = Gst.ElementFactory.make("nvmultistreamtiler", "nvtiler")
-    if not tiler:
-        sys.stderr.write(" Unable to create tiler \n")
+        
+    # Elimino el tiler para validar si se corrige el tema del object_ID   
+    # print("Creating tiler \n ")
+    # tiler = Gst.ElementFactory.make("nvmultistreamtiler", "nvtiler")
+    # if not tiler:
+    #     sys.stderr.write(" Unable to create tiler \n")
+    
     print("Creating nvvidconv \n ")
     nvvidconv = Gst.ElementFactory.make("nvvideoconvert", "convertor")
     if not nvvidconv:
@@ -304,16 +307,20 @@ def main(args):
         print("WARNING: Overriding infer-config batch-size", pgie_batch_size, " with number of sources ",
               number_sources, " \n")
         pgie.set_property("batch-size", number_sources)
-    tiler_rows = int(math.sqrt(number_sources))
-    tiler_columns = int(math.ceil((1.0*number_sources)/tiler_rows))
-    tiler.set_property("rows", tiler_rows)
-    tiler.set_property("columns", tiler_columns)
-    tiler.set_property("width", TILED_OUTPUT_WIDTH)
-    tiler.set_property("height", TILED_OUTPUT_HEIGHT)
+
+    # Elimino referencia del tiler    
+    # tiler_rows = int(math.sqrt(number_sources))
+    # tiler_columns = int(math.ceil((1.0*number_sources)/tiler_rows))
+    # tiler.set_property("rows", tiler_rows)
+    # tiler.set_property("columns", tiler_columns)
+    # tiler.set_property("width", TILED_OUTPUT_WIDTH)
+    # tiler.set_property("height", TILED_OUTPUT_HEIGHT)
 
     print("Adding elements to Pipeline \n")
     pipeline.add(pgie)
-    pipeline.add(tiler)
+    
+    # Elimino referencia del tiler
+    # pipeline.add(tiler)
     pipeline.add(nvvidconv)
     pipeline.add(nvosd)
     if is_aarch64():
@@ -321,22 +328,35 @@ def main(args):
     pipeline.add(sink)
 
     print("Linking elements in the Pipeline \n")
+    # se modifican los links por que ya no existe tiler
+    
+    #streammux.link(pgie)
+    #pgie.link(tiler)
+    #tiler.link(nvvidconv)
+    #nvvidconv.link(nvosd)
+    #if is_aarch64():
+    #    nvosd.link(transform)
+    #    transform.link(sink)
+    #else:
+    #    nvosd.link(sink)   
+
     streammux.link(pgie)
-    pgie.link(tiler)
-    tiler.link(nvvidconv)
+    pgie.link(nvvidconv)
     nvvidconv.link(nvosd)
     if is_aarch64():
         nvosd.link(transform)
         transform.link(sink)
     else:
         nvosd.link(sink)   
-
+        
+        
     # create an event loop and feed gstreamer bus mesages to it
     loop = GObject.MainLoop()
     bus = pipeline.get_bus()
     bus.add_signal_watch()
     bus.connect ("message", bus_call, loop)
-    tiler_src_pad=pgie.get_static_pad("src")
+    
+    tiler_src_pad = pgie.get_static_pad("src")
     if not tiler_src_pad:
         sys.stderr.write(" Unable to get src pad \n")
     else:
