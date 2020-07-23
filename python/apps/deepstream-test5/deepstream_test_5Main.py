@@ -488,8 +488,9 @@ def main(args):
     bus.add_signal_watch()
     bus.connect("message", bus_call, loop)
     
-    # Dudas en que hace tiler...
-    tiler_src_pad = pgie.get_static_pad("src")
+    # Modifico pgie vs tracker
+    # tiler_src_pad = pgie.get_static_pad("src")
+    tiler_src_pad = tracker.get_static_pad("src")
     if not tiler_src_pad:
         sys.stderr.write(" Unable to get src pad \n")
     else:
