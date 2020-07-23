@@ -291,7 +291,12 @@ def main(args):
     #source = Gst.ElementFactory.make("filesrc", "file-source")
     # Se crea elemento que acepta todo tipo de video o RTSP
     
-   
+    # Create nvstreammux instance to form batches from one or more sources.
+    streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
+    if not streammux:
+        sys.stderr.write(" Unable to create NvStreamMux \n")
+    pipeline.add(streammux)
+    
     for i in range(number_sources):
         print("Creating source_bin ", i, " \n ")
         uri_name = args[i+1]
@@ -339,10 +344,7 @@ def main(args):
     if not decoder:
         sys.stderr.write(" Unable to create Nvv4l2 Decoder \n")
 
-    # Create nvstreammux instance to form batches from one or more sources.
-    streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
-    if not streammux:
-        sys.stderr.write(" Unable to create NvStreamMux \n")
+    
 
     # Use nvinfer to run inferencing on decoder's output,
     # behaviour of inferencing is set through config file
@@ -439,7 +441,7 @@ def main(args):
     pipeline.add(uri_decode_bin)
     #pipeline.add(h264parser)
     #pipeline.add(decoder)
-    pipeline.add(streammux)
+    # pipeline.add(streammux) ya fue añadido al principio del main, antes del for de evaluación de videos
     pipeline.add(pgie)
     pipeline.add(tracker)
     pipeline.add(sgie1)
