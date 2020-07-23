@@ -348,10 +348,10 @@ def main(args):
     bus.add_signal_watch()
     bus.connect ("message", bus_call, loop)
     
-    # en lugar de envir SRC con PGIE envio sink con nvosd
-    #tiler_src_pad = pgie.get_static_pad("src")
     
-    tiler_src_pad = nvosd.get_static_pad("sink")
+    tiler_src_pad = pgie.get_static_pad("src")
+    
+    #tiler_src_pad = nvosd.get_static_pad("sink")
     if not tiler_src_pad:
         sys.stderr.write(" Unable to get src pad \n")
     else:
