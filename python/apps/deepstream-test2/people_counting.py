@@ -294,11 +294,11 @@ def current_tracked_values(tracks, enable_trace = False, frequency = 40, file_ha
 
 
 def display_speed_calculation(frame, object_id, x, y, w, h, x2, y2, w2, h2, color, object_speed):
-    y_pix_dist = int(y + (h-y)/2) - int(y2 + (h2-y2)/2)
+    y_pix_dist = int(y + (h - y) / 2) - int(y2 + (h2 - y2) / 2)
     text_y = "{} y".format(y_pix_dist)
-    x_pix_dist = int(x + (w-x)/2) - int(x2 + (w2-x2)/2)
+    x_pix_dist = int(x + (w - x) / 2) - int(x2 + (w2 - x2) / 2)
     text_x = "{} x".format(x_pix_dist)
-    final_pix_dist = sqrt((y_pix_dist*y_pix_dist)+(x_pix_dist*x_pix_dist))
+    final_pix_dist = sqrt((y_pix_dist * y_pix_dist) + (x_pix_dist * x_pix_dist))
     speed = np.round(1.5 * y_pix_dist, 2)
     # text_speed = "{} km/h".format(speed)
     text_speed = "{}".format(object_id)
@@ -380,8 +380,7 @@ def get_file_name(suffix = '', delete_if_created = False):
     return file_name
 
 
-#def count_in_and_out_when_object_leaves_the_frame(counter_1_to_2, counter_2_to_1, initial, last, ids, file_handler2):
-def count_in_and_out_when_object_leaves_the_frame(initial, last, ids):
+def count_in_and_out_when_object_leaves_the_frame(ids):
     '''
     The area A1 is the one closer to the point (0,0)
     Area A1 is by default outside 
@@ -390,7 +389,6 @@ def count_in_and_out_when_object_leaves_the_frame(initial, last, ids):
     '''
     if counting_in_and_out['enabled']:
         if frameIndex % counting_in_and_out['report_frequency'] == 0:
-
             elements_to_delete = set()
             camera_id = get_camera_mac_address()
        
@@ -426,11 +424,12 @@ def count_in_and_out_when_object_leaves_the_frame(initial, last, ids):
             #return counter_1_to_2, counter_2_to_1
 
 
-def people_counting_storing_fist_time(object_id, first_time_set):
+#def people_counting_storing_fist_time(object_id, first_time_set):
+def people_counting_storing_fist_time(object_id):
     '''
     Storing only the first time the ID appears
     '''
-    if object_id not in first_time_set:
+    if people_counting['enabled'] and object_id not in first_time_set:
         data = {
                 'camera_id': get_camera_mac_address(),
                 'date_time': get_timestamp(),
@@ -440,8 +439,9 @@ def people_counting_storing_fist_time(object_id, first_time_set):
         first_time_set.add(object_id)
 
 
-def people_counting_last_time_detected(first_time_set, last_time_set, ids):
-    if first_time_set:
+#def people_counting_last_time_detected(first_time_set, last_time_set, ids):
+def people_counting_last_time_detected(ids):
+    if people_counting['enabled'] and first_time_set:
         ids_set = set(ids)
         for item in first_time_set.difference(ids_set):
             if item not in last_time_set:
@@ -455,7 +455,7 @@ def people_counting_last_time_detected(first_time_set, last_time_set, ids):
         first_time_set = first_time_set.intersection(ids_set)
 
 
-def counting_in_and_out_first_detection(box, initial, last, object_id):
+def counting_in_and_out_first_detection(box, object_id):
     '''
     A1 is the closest to the origin (0,0) and A2 is the area after the reference line
     A1 is by default the outside

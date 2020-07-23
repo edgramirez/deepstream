@@ -42,11 +42,11 @@ PGIE_CLASS_ID_BICYCLE = 1
 PGIE_CLASS_ID_PERSON = 2
 PGIE_CLASS_ID_ROADSIGN = 3
 
-initial = {}
-last = {}
+first_time_set = set()
+last_time_set = set()
 
 
-def osd_sink_pad_buffer_probe(pad, info, u_data, initial, last):
+def osd_sink_pad_buffer_probe(pad, info, u_data):
     frame_number = 0
     # Intiallizing object counter with 0.
     obj_counter = {
@@ -66,6 +66,7 @@ def osd_sink_pad_buffer_probe(pad, info, u_data, initial, last):
     # C address of gst_buffer as input, which is obtained with hash(gst_buffer)
     batch_meta = pyds.gst_buffer_get_nvds_batch_meta(hash(gst_buffer))
     l_frame = batch_meta.frame_meta_list
+    previous = False
     while l_frame is not None:
         try:
             # Note that l_frame.data needs a cast to pyds.NvDsFrameMeta
@@ -90,30 +91,27 @@ def osd_sink_pad_buffer_probe(pad, info, u_data, initial, last):
             except StopIteration:
                 break
             obj_counter[obj_meta.class_id] += 1
-            # https://forums.developer.nvidia.com/t/custom-nvdsobjectmeta-in-python/125690
-            #pyds.nvds_acquire_meta_lock(batch_meta)
-            #frame_meta.bInferDone = True
-            #obj_meta = pyds.nvds_acquire_obj_meta_from_pool(batch_meta)
-            #obj_meta.rect_params.top = y - (h / 2)
-            #obj_meta.rect_params.left = x - (w / 2)
-            #obj_meta.rect_params.width = w
-            #obj_meta.rect_params.height = h
             x = obj_meta.rect_params.left
             y = obj_meta.rect_params.top
             obj_id = obj_meta.object_id
-            #edgar print('frame number', frame_number, "Id: ", obj_id, 'x: ', x, 'y: ', y)
 
-            # Service counting in and out
-            pc.counting_in_and_out_first_detection((x, y), initial, last, obj_id)
+            # Service Aforun (in and out)
+            pc.counting_in_and_out_first_detection((x, y), obj_id)
             ids.append(obj_id)
-            #print('edgar')
-            #quit()
+
+            # Servecie People counting
+            if previous:
+                people_counting_last_time_detected(ids)
+                people_counting_storing_fist_time(ids[i])
+
             try: 
                 l_obj = l_obj.next
             except StopIteration:
                 break
-
-        pc.count_in_and_out_when_object_leaves_the_frame(initial, last, ids)
+        previous = True
+        
+        # Service Aforun (in and out)
+        pc.count_in_and_out_when_object_leaves_the_frame(ids)
 
         # Acquiring a display meta object. The memory ownership remains in
         # the C code so downstream plugins can still access it. Otherwise
@@ -337,7 +335,7 @@ def main(args):
     osdsinkpad = nvosd.get_static_pad("sink")
     if not osdsinkpad:
         sys.stderr.write(" Unable to get sink pad of nvosd \n")
-    osdsinkpad.add_probe(Gst.PadProbeType.BUFFER, osd_sink_pad_buffer_probe, 0, initial, last)
+    osdsinkpad.add_probe(Gst.PadProbeType.BUFFER, osd_sink_pad_buffer_probe, 0)
 
     print("Starting pipeline \n")
     
