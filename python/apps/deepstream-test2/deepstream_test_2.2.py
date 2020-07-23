@@ -462,8 +462,8 @@ def main(args):
     if not srcpad:
         sys.stderr.write(" Unable to get source pad of decoder \n")
 
-    source.link(streammux)
-    srcpad.link(sinkpad)
+    srcpad.link(sinkpad)    
+    uri_decode_bin.link(streammux)
     streammux.link(pgie)
     pgie.link(tracker)
     tracker.link(sgie1)
