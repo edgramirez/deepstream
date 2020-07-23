@@ -33,8 +33,10 @@ gi.require_version('Gst', '1.0')
 from gi.repository import GObject, Gst
 from common.is_aarch_64 import is_aarch64
 from common.bus_call import bus_call
+from common.FPS import GETFPS
 
 import pyds
+
 #from people_counting import count_in_and_out_when_object_leaves_the_frame, count_in_and_out_when_object_leaves_the_frame
 import people_counting as pc
 
