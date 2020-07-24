@@ -119,6 +119,7 @@ def tiler_src_pad_buffer_probe(pad, info, u_data):
             except StopIteration:
                 break
             obj_counter[obj_meta.class_id] += 1
+            print ("ID : ", obj_meta.object_id)
             try: 
                 l_obj = l_obj.next
             except StopIteration:
