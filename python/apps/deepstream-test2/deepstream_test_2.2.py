@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+#rm ${HOME}/.cache/gstreamer-1.0/registry.aarch64.bin    borrar cache
 ################################################################################
 # Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
 #
@@ -394,9 +395,6 @@ def main(args):
     if not sink:
         sys.stderr.write(" Unable to create egl sink \n")
 
-    #print("Playing file %s " % args[1])
-    #source.set_property('location', args[1])
-    
     streammux.set_property('width', 1920)
     streammux.set_property('height', 1080)
     streammux.set_property('batch-size', 1)
@@ -408,15 +406,6 @@ def main(args):
     sgie2.set_property('config-file-path', CURRENT_DIR + "/dstest2_sgie2_config.txt")
     sgie3.set_property('config-file-path', CURRENT_DIR + "/dstest2_sgie3_config.txt")
     
-    #pgie.set_property('config-file-path',
-    #                  "/home/edgar/deepstream_python_v0.9/python/apps/deepstream-test2/dstest2_pgie_config.txt")
-    #sgie1.set_property('config-file-path',
-    #                   "/home/edgar/deepstream_python_v0.9/python/apps/deepstream-test2/dstest2_sgie1_config.txt")
-    #sgie2.set_property('config-file-path',
-    #                   "/home/edgar/deepstream_python_v0.9/python/apps/deepstream-test2/dstest2_sgie2_config.txt")
-    #sgie3.set_property('config-file-path',
-    #                   "/home/edgar/deepstream_python_v0.9/python/apps/deepstream-test2/dstest2_sgie3_config.txt")
-
     # Set properties of tracker
     config = configparser.ConfigParser()
     config.read('dstest2_tracker_config.txt')
