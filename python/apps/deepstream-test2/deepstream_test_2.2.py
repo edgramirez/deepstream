@@ -37,20 +37,35 @@ from common.bus_call import bus_call
 from common.FPS import GETFPS
 
 import pyds
-
 import people_counting as pc
+
+#Bibliotecas Adicioanles para la funcionaliad con Tiler
+from gi.repository import GLib
+from ctypes import *
+import time
+import math
+
 
 PGIE_CLASS_ID_VEHICLE = 0
 PGIE_CLASS_ID_BICYCLE = 1
 PGIE_CLASS_ID_PERSON = 2
 PGIE_CLASS_ID_ROADSIGN = 3
+# Variables adicionales para el manejo de la funcionalidad de Tiler
+
+MAX_DISPLAY_LEN = 64
+MUXER_OUTPUT_WIDTH = 1920
+MUXER_OUTPUT_HEIGHT = 80
+MUXER_BATCH_TIMEOUT_USEC = 4000000
+TILED_OUTPUT_WIDTH = 1920
+TILED_OUTPUT_HEIGHT = 1080
+GST_CAPS_FEATURES_NVMM = "memory:NVMM"
+pgie_classes_str = ["Vehicle", "TwoWheeler", "Person", "RoadSign"]
 
 # directorio actual
 CURRENT_DIR = os.getcwd()
 
 # Matriz de frames per second
-# Se utiliza en tiler, anque aqui no lo usamos por que no nos regresa el object_id
-
+# Se utiliza en tiler
 fps_streams = {}
 
 
@@ -73,6 +88,7 @@ def osd_sink_pad_buffer_probe(pad, info, u_data):
     # Retrieve batch metadata from the gst_buffer
     # Note that pyds.gst_buffer_get_nvds_batch_meta() expects the
     # C address of gst_buffer as input, which is obtained with hash(gst_buffer)
+    
     batch_meta = pyds.gst_buffer_get_nvds_batch_meta(hash(gst_buffer))
     l_frame = batch_meta.frame_meta_list
     previous = pc.get_previous()
@@ -84,7 +100,7 @@ def osd_sink_pad_buffer_probe(pad, info, u_data):
             # in the C code, so the Python garbage collector will leave
             # it alone.
             frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
-            #print("Source id is ", frame_meta.source_id)
+
         except StopIteration:
             break
 
@@ -107,7 +123,7 @@ def osd_sink_pad_buffer_probe(pad, info, u_data):
             y = obj_meta.rect_params.top
             obj_id = obj_meta.object_id
 
-            # Service Aforun (in and out)
+            # Service Aforo (in and out)
             pc.counting_in_and_out_first_detection((x, y), obj_id)
             ids.append(obj_id)
             boxes.append((x, y))
@@ -129,20 +145,23 @@ def osd_sink_pad_buffer_probe(pad, info, u_data):
         pc.set_previous(True)
         previous = pc.get_previous()
         
-        # Service Aforun (in and out)
+        # Service Aforo (in and out)
         pc.count_in_and_out_when_object_leaves_the_frame(ids)
 
         # Acquiring a display meta object. The memory ownership remains in
         # the C code so downstream plugins can still access it. Otherwise
         # the garbage collector will claim it when this probe function exits.
+        
         display_meta = pyds.nvds_acquire_display_meta_from_pool(batch_meta)
         display_meta.num_labels = 1
         py_nvosd_text_params = display_meta.text_params[0]
+        
         # Setting display text to be shown on screen
         # Note that the pyds module allocates a buffer for the string, and the
         # memory will not be claimed by the garbage collector.
         # Reading the display_text field here will return the C address of the
         # allocated string. Use pyds.get_string() to get the string content.
+        
         py_nvosd_text_params.display_text = \
             "Frame Number={} Number of Objects={} Vehicle_count={} Person_count={}"\
                 .format(frame_number, num_rects, obj_counter[PGIE_CLASS_ID_VEHICLE], obj_counter[PGIE_CLASS_ID_PERSON])
@@ -161,10 +180,9 @@ def osd_sink_pad_buffer_probe(pad, info, u_data):
         py_nvosd_text_params.set_bg_clr = 1
         # set(red, green, blue, alpha); set to Black
         py_nvosd_text_params.text_bg_clr.set(0.0, 0.0, 0.0, 1.0)
-        # Using pyds.get_string() to get display_text as string
-        #print('edgarrr', pyds.get_string(py_nvosd_text_params.display_text))
-        #pyds.nvds_add_display_meta_to_frame(frame_meta, display_meta)
         
+        # Using pyds.get_string() to get display_text as string
+       
         try:
             l_frame = l_frame.next
         except StopIteration:
@@ -263,23 +281,17 @@ def create_source_bin(index, uri):
 
 def main(args):
     # Check input arguments
-    #if len(args) != 2:
-    #    sys.stderr.write("usage: %s <media file or uri>\n" % args[0])
-    #    sys.exit(1)
-        
+    # Permite introducir un numero x de fuentes, en nuestro caso streamings delas camaras Meraki        
         
     number_sources = len(args)-1    
     if number_sources+1 < 2:
         sys.stderr.write("usage: %s <uri1> [uri2] ... [uriN]\n" % args[0])
         sys.exit(1)
 
-    # Arreglo de FPS, ahorita no lo ocupamos por que tiene relacion con Tiler y con Tiler no nos esta dando el object_id
+    # Arreglo de FPS, para manejo con Tiler 
     
     for i in range(0, number_sources):
         fps_streams["stream{0}".format(i)] = GETFPS(i)
-      
-      
-        
         
     # Standard GStreamer initialization
     GObject.threads_init()
@@ -295,16 +307,19 @@ def main(args):
 
     # Source element for reading from the file
     print("Creating Source \n ")
+    
+    # Variable para verificar si al menos un video esta vivo
     is_live = False
-    #source = Gst.ElementFactory.make("filesrc", "file-source")
-    # Se crea elemento que acepta todo tipo de video o RTSP
+    
     
     # Create nvstreammux instance to form batches from one or more sources.
+    
     streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
     if not streammux:
         sys.stderr.write(" Unable to create NvStreamMux \n")
     pipeline.add(streammux)
     
+    # Se crea elemento que acepta todo tipo de video o RTSP
     for i in range(number_sources):
         print("Creating source_bin ", i, " \n ")
         uri_name = args[i+1]
@@ -323,39 +338,26 @@ def main(args):
             sys.stderr.write("Unable to create src pad bin \n")
         srcpad.link(sinkpad)
     
-    
-    
-    
-    
-    
-    
-    #source = Gst.ElementFactory.make("uridecodebin", "uri-decode-bin")
-    #if not source:
-    #    sys.stderr.write(" Unable to create Source \n")
-
         
-        
-    # Since the data format in the input file is elementary h264 stream,
-    # we need a h264parser
     
-    # el video con RTSP para Meraki viene optimizado a H264, dejamos ahorita la creación del elemento y evaluamos si es necesario mantenerlo
+    # el video con RTSP para Meraki viene optimizado a H264, por lo que no debe ser necesario crear un elemento h264parser stream
     
-    print("Creating H264Parser \n")
-    h264parser = Gst.ElementFactory.make("h264parse", "h264-parser")
-    if not h264parser:
-        sys.stderr.write(" Unable to create h264 parser \n")
+    #print("Creating H264Parser \n")
+    #h264parser = Gst.ElementFactory.make("h264parse", "h264-parser")
+    #if not h264parser:
+    #    sys.stderr.write(" Unable to create h264 parser \n")
 
     # Use nvdec_h264 for hardware accelerated decode on GPU
-    # el video con RTSP para Meraki viene optimizado a H264, dejamos ahorita la creación del elemento y evaluamos si es necesario mantenerlo
+    # el video con RTSP para Meraki viene optimizado a H264, pero si necesita ser decodificado
+    
     print("Creating Decoder \n")
     decoder = Gst.ElementFactory.make("nvv4l2decoder", "nvv4l2-decoder")
     if not decoder:
         sys.stderr.write(" Unable to create Nvv4l2 Decoder \n")
 
-    
-
     # Use nvinfer to run inferencing on decoder's output,
     # behaviour of inferencing is set through config file
+    
     pgie = Gst.ElementFactory.make("nvinfer", "primary-inference")
     if not pgie:
         sys.stderr.write(" Unable to create pgie \n")
@@ -432,12 +434,9 @@ def main(args):
             tracker.set_property('enable_batch_process', tracker_enable_batch_process)
 
     print("Adding elements to Pipeline \n")
-    #pipeline.add(source)
-    # source_bin sustituye a source
-    # pipeline.add(source_bin)   Añadida dentro del for.
-    #pipeline.add(h264parser)
-    #pipeline.add(decoder)
-    # pipeline.add(streammux) ya fue añadido al principio del main, antes del for de evaluación de videos
+    
+    
+    pipeline.add(decoder)
     pipeline.add(pgie)
     pipeline.add(tracker)
     pipeline.add(sgie1)
@@ -450,9 +449,10 @@ def main(args):
         pipeline.add(transform)
 
     # we link the elements together
-    # file-source -> h264-parser -> nvh264-decoder ->
-    # nvinfer -> nvvidconv -> nvosd -> video-renderer
+    # source_bin -> -> nvh264-decoder -> PGIE -> Tracker
+    # nvvidconv -> nvosd -> video-renderer
     print("Linking elements in the Pipeline \n")
+    
     #source.link(h264parser)
     #h264parser.link(decoder)
 
@@ -463,9 +463,21 @@ def main(args):
     if not srcpad:
         sys.stderr.write(" Unable to get source pad of decoder \n")
 
+    # Flujo anterior antes de incluir el decoder    
+    #srcpad.link(sinkpad)    
+    #source_bin.link(streammux)
+    #streammux.link(pgie)
+    #pgie.link(tracker)
+    #tracker.link(sgie1)
+    #sgie1.link(sgie2)
+    #sgie2.link(sgie3)
+    #sgie3.link(nvvidconv)
+    #nvvidconv.link(nvosd)
+    
+    # Flujo Añadiendo el decoder
     srcpad.link(sinkpad)    
-    #uri_decode_bin.link(streammux)
-    source_bin.link(streammux)
+    source_bin.link(decoder)
+    decoder.link(streammux)
     streammux.link(pgie)
     pgie.link(tracker)
     tracker.link(sgie1)
@@ -473,13 +485,14 @@ def main(args):
     sgie2.link(sgie3)
     sgie3.link(nvvidconv)
     nvvidconv.link(nvosd)
-
+    
     if is_aarch64():
         nvosd.link(transform)
         transform.link(sink)
     else:
         nvosd.link(sink)
 
+        
     # create and event loop and feed gstreamer bus mesages to it
     loop = GObject.MainLoop()
 
