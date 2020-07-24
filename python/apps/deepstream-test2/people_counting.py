@@ -21,6 +21,24 @@ global server_url
 global total_frames_counter
 global sd_keys
 global NFPS 
+global previous
+global first_time_set
+global last_time_set
+global frame_count
+
+previous = False
+first_time_set = set()
+last_time_set = set()
+
+
+def get_previous():
+    global previous
+    return previous
+
+
+def set_previous(value):
+    global previous
+    previous = value
 
 
 def file_exists(file_name):
@@ -429,6 +447,8 @@ def people_counting_storing_fist_time(object_id):
     '''
     Storing only the first time the ID appears
     '''
+    global first_time_set
+
     if people_counting['enabled'] and object_id not in first_time_set:
         data = {
                 'camera_id': get_camera_mac_address(),
@@ -441,6 +461,8 @@ def people_counting_storing_fist_time(object_id):
 
 #def people_counting_last_time_detected(first_time_set, last_time_set, ids):
 def people_counting_last_time_detected(ids):
+    global first_time_set
+
     if people_counting['enabled'] and first_time_set:
         ids_set = set(ids)
         for item in first_time_set.difference(ids_set):
@@ -491,7 +513,25 @@ def check_inner_distance_relations(pivot_element_dict, rest_of_elements_dict):
     return None
 
 
-def get_distances_between_detected_elements_from_centroid(frame, boxes, ids, dict_of_ids, distance_plus_factor, nfps, risk_value, frame_count):
+def get_frame_counter():
+    global frame_count
+    if frame_count is None:
+        frame_count = 0
+    return frame_count
+
+
+def set_frame_counter(value):
+    global frame_count
+    frame_count = int(value)
+
+
+#def get_distances_between_detected_elements_from_centroid(frame, boxes, ids, dict_of_ids, distance_plus_factor, nfps, risk_value, frame_count):
+def get_distances_between_detected_elements_from_centroid(boxes, ids):
+    global dict_of_ids, distance_plus_factor, nfps
+
+    frame_count = get_frame_counter()
+    if not social_distance['enabled']:
+        return
 
     # if we just detected 1 element, there is no need to calculate distances
     length = len(boxes)
@@ -557,13 +597,13 @@ def get_distances_between_detected_elements_from_centroid(frame, boxes, ids, dic
                 if distance_plus_factor > (abs(box[0] - inner_box[0]) + abs(box[1] - inner_box[1])): 
                     x2 = inner_box[0]
                     y2 = inner_box[1]
-                    w2 = inner_box[2]
-                    h2 = inner_box[3]
+                    #w2 = inner_box[2]
+                    #h2 = inner_box[3]
 
                     x1 = box[0]
                     y1 = box[1]
-                    w1 = box[2]
-                    h1 = box[3]
+                    #w1 = box[2]
+                    #h1 = box[3]
 
                     distance = sqrt( ((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1)) )
 
@@ -591,12 +631,9 @@ def get_distances_between_detected_elements_from_centroid(frame, boxes, ids, dic
                             # report social distance alarm if inner_id has been visibled n times = to risk_value and no previous alert
                             if dict_of_ids[str(ids[i-1])]['inner_ids'][str(ids[i+j])]['visible'] >= risk_value:
 
-                                #cv2.rectangle(frame, (x, y), (w, h), color, cfg['rectangle']['width'])
-                                cv2.rectangle(frame, (int(x1), int(y1)), (int(w1), int(h1)), (0,0,255), 3)
-                                cv2.rectangle(frame, (int(x2), int(y2)), (int(w2), int(h2)), (0,0,255), 3)
-                                #coordinates_list = [(int(x2), int(y2)), (int(x1), int(y1))]
-                                #arguments = {'xy': coordinates_list, 'line_width': get_social_distance_parameter_value('line_width'), 'color': get_social_distance_parameter_value('line_color')}
-                                #draw_line(frame, **arguments)
+                                #if social_distance['enabled_draw_rectangle']:
+                                #    cv2.rectangle(frame, (int(x1), int(y1)), (int(w1), int(h1)), (0,0,255), 3)
+                                #    cv2.rectangle(frame, (int(x2), int(y2)), (int(w2), int(h2)), (0,0,255), 3)
 
                                 if not dict_of_ids[str(ids[i-1])]['inner_ids'][str(ids[i+j])]['alert_id']:
 
@@ -697,14 +734,10 @@ else:
 
 # loop over frames from the video file stream
 writer = None
-frame_count = 0
 
 get_file_name('trace', delete_if_created=True)
 get_file_name('people_counting', delete_if_created=True)
 
-first_time_set = set()
-last_time_set = set()
-dict_of_ids = {}
 
 initial = {}
 last = {}
@@ -713,7 +746,8 @@ counter_1_to_2 = 0
 counter_2_to_1 = 0
 intersection_counter = 0
 
-tolerated_distance_plus_factor = social_distance['tolerated_distance'] * 1.42  # raiz cuadrada de 2, maxima distancia de la suma de sus lados
+dict_of_ids = {}
+distance_plus_factor = social_distance['tolerated_distance'] * 1.42  # raiz cuadrada de 2, maxima distancia de la suma de sus lados
 nfps = get_number_of_frames_per_second()
 risk_value = nfps * social_distance['persistence_time']
 

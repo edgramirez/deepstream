@@ -37,7 +37,6 @@ from common.FPS import GETFPS
 
 import pyds
 
-#from people_counting import count_in_and_out_when_object_leaves_the_frame, count_in_and_out_when_object_leaves_the_frame
 import people_counting as pc
 
 PGIE_CLASS_ID_VEHICLE = 0
@@ -53,12 +52,8 @@ CURRENT_DIR = os.getcwd()
 
 fps_streams = {}
 
-first_time_set = set()
-last_time_set = set()
-
 
 def osd_sink_pad_buffer_probe(pad, info, u_data):
-    frame_number = 0
     # Intiallizing object counter with 0.
     obj_counter = {
             PGIE_CLASS_ID_VEHICLE: 0,
@@ -66,8 +61,10 @@ def osd_sink_pad_buffer_probe(pad, info, u_data):
             PGIE_CLASS_ID_BICYCLE: 0,
             PGIE_CLASS_ID_ROADSIGN: 0
             }
+    frame_number = 0
     num_rects = 0
     gst_buffer = info.get_buffer()
+
     if not gst_buffer:
         print("Unable to get GstBuffer ")
         return
@@ -77,7 +74,7 @@ def osd_sink_pad_buffer_probe(pad, info, u_data):
     # C address of gst_buffer as input, which is obtained with hash(gst_buffer)
     batch_meta = pyds.gst_buffer_get_nvds_batch_meta(hash(gst_buffer))
     l_frame = batch_meta.frame_meta_list
-    previous = False
+    previous = pc.get_previous()
     while l_frame is not None:
         try:
             # Note that l_frame.data needs a cast to pyds.NvDsFrameMeta
@@ -91,16 +88,19 @@ def osd_sink_pad_buffer_probe(pad, info, u_data):
             break
 
         frame_number = frame_meta.frame_num
+        pc.set_frame_counter(frame_number)
         l_obj = frame_meta.obj_meta_list
         num_rects = frame_meta.num_obj_meta
 
         ids = []
+        boxes = []
         while l_obj is not None:
             try:
                 # Casting l_obj.data to pyds.NvDsObjectMeta
                 obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
             except StopIteration:
                 break
+
             obj_counter[obj_meta.class_id] += 1
             x = obj_meta.rect_params.left
             y = obj_meta.rect_params.top
@@ -109,17 +109,24 @@ def osd_sink_pad_buffer_probe(pad, info, u_data):
             # Service Aforun (in and out)
             pc.counting_in_and_out_first_detection((x, y), obj_id)
             ids.append(obj_id)
+            boxes.append((x, y))
 
-            # Servecie People counting
+            # Service People counting
             if previous:
-                people_counting_last_time_detected(ids)
-                people_counting_storing_fist_time(ids[i])
+                pc.people_counting_last_time_detected(ids)
+                pc.people_counting_storing_fist_time(obj_id)
 
             try: 
                 l_obj = l_obj.next
             except StopIteration:
                 break
-        previous = True
+
+        # Service Social Distance
+        if previous:
+            pc.get_distances_between_detected_elements_from_centroid(boxes, ids)
+
+        pc.set_previous(True)
+        previous = pc.get_previous()
         
         # Service Aforun (in and out)
         pc.count_in_and_out_when_object_leaves_the_frame(ids)
@@ -408,7 +415,7 @@ def main(args):
     #sgie2.set_property('config-file-path',
     #                   "/home/edgar/deepstream_python_v0.9/python/apps/deepstream-test2/dstest2_sgie2_config.txt")
     #sgie3.set_property('config-file-path',
-                       "/home/edgar/deepstream_python_v0.9/python/apps/deepstream-test2/dstest2_sgie3_config.txt")
+    #                   "/home/edgar/deepstream_python_v0.9/python/apps/deepstream-test2/dstest2_sgie3_config.txt")
 
     # Set properties of tracker
     config = configparser.ConfigParser()
