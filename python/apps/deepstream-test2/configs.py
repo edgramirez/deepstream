@@ -1,5 +1,8 @@
 config = {
-        'server_url': 'https://repo2.kairosconnect.app/storage',
+        'server': {
+            'url': 'https://mit.kairosconnect.app/api/',
+            'token_file': '/home/edgar/.token',
+            },
 
         'business': {
             'id': '0001',
@@ -51,12 +54,12 @@ config = {
                 'frequency': 32,
                 },
             'counting_in_and_out': {
-                'enabled': False,
+                'enabled': True,
                 'outside_area': 1, # 1 defines A1 as outside, 2 defines A2 as outside area
                 'report_frequency': 15,
                 },
             'social_distance': {
-                'enabled': True,
+                'enabled': False,
                 'tolerated_distance': 150,
                 'persistence_time': 3,
                 'enabled_draw_line': False,
