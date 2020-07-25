@@ -69,7 +69,7 @@ CURRENT_DIR = os.getcwd()
 fps_streams = {}
 
 
-def osd_sink_pad_buffer_probe(pad, info, u_data):
+def tiler_src_pad_buffer_probe(pad, info, u_data):
     # Intiallizing object counter with 0.
     obj_counter = {
             PGIE_CLASS_ID_VEHICLE: 0,
@@ -182,24 +182,13 @@ def osd_sink_pad_buffer_probe(pad, info, u_data):
         py_nvosd_text_params.text_bg_clr.set(0.0, 0.0, 0.0, 1.0)
         
         # Using pyds.get_string() to get display_text as string
-       
+        # Get frame rate through this probe
+        fps_streams["stream{0}".format(frame_meta.pad_index)].get_fps()       
         try:
             l_frame = l_frame.next
         except StopIteration:
             break
     return Gst.PadProbeReturn.OK	
-
-
-    # Get frame rate through this probe
-    #    fps_streams["stream{0}".format(frame_meta.pad_index)].get_fps()
-    #    try:
-    #        l_frame = l_frame.next
-    #    except StopIteration:
-    #        break
-
-    return Gst.PadProbeReturn.OK
-
-
 
 
 # Se añaden 3 funciones para el manejo de video en cualquier formato
@@ -377,7 +366,12 @@ def main(args):
     sgie3 = Gst.ElementFactory.make("nvinfer", "secondary3-nvinference-engine")
     if not sgie3:
         sys.stderr.write(" Unable to make sgie3 \n")
-
+        
+    print("Creating tiler \n ")
+    tiler = Gst.ElementFactory.make("nvmultistreamtiler", "nvtiler")
+    if not tiler:
+        sys.stderr.write(" Unable to create tiler \n")
+        
     nvvidconv = Gst.ElementFactory.make("nvvideoconvert", "convertor")
     if not nvvidconv:
         sys.stderr.write(" Unable to create nvvidconv \n")
@@ -396,14 +390,28 @@ def main(args):
     sink = Gst.ElementFactory.make("nveglglessink", "nvvideo-renderer")
     if not sink:
         sys.stderr.write(" Unable to create egl sink \n")
-
+        
+        
+    if is_live:
+        print("At least one of the sources is live")
+        streammux.set_property('live-source', 1)
+        
     streammux.set_property('width', 1920)
     streammux.set_property('height', 1080)
     streammux.set_property('batch-size', 1)
     streammux.set_property('batched-push-timeout', 4000000)
 
-    # Set properties of pgie and sgie
     pgie.set_property('config-file-path', CURRENT_DIR + "/dstest2_pgie_config.txt")
+    # Falta añadir la ruta completa del archivo de configuracion
+    pgie_batch_size = pgie.get_property("batch-size")
+
+    if pgie_batch_size != number_sources:
+        print("WARNING: Overriding infer-config batch-size", pgie_batch_size,
+              " with number of sources ", number_sources, " \n")
+        pgie.set_property("batch-size", number_sources)
+    
+    # Set properties of pgie and sgie
+    #pgie.set_property('config-file-path', CURRENT_DIR + "/dstest2_pgie_config.txt")
     sgie1.set_property('config-file-path', CURRENT_DIR + "/dstest2_sgie1_config.txt")
     sgie2.set_property('config-file-path', CURRENT_DIR + "/dstest2_sgie2_config.txt")
     sgie3.set_property('config-file-path', CURRENT_DIR + "/dstest2_sgie3_config.txt")
@@ -432,7 +440,15 @@ def main(args):
         elif key == 'enable-batch-process':
             tracker_enable_batch_process = config.getint('tracker', key)
             tracker.set_property('enable_batch_process', tracker_enable_batch_process)
-
+            
+    # Creacion del marco de tiler 
+    tiler_rows = int(math.sqrt(number_sources))
+    tiler_columns = int(math.ceil((1.0 * number_sources)/tiler_rows))
+    tiler.set_property("rows", tiler_rows)
+    tiler.set_property("columns", tiler_columns)
+    tiler.set_property("width", TILED_OUTPUT_WIDTH)
+    tiler.set_property("height", TILED_OUTPUT_HEIGHT)
+            
     print("Adding elements to Pipeline \n")
     
     
@@ -442,6 +458,7 @@ def main(args):
     pipeline.add(sgie1)
     pipeline.add(sgie2)
     pipeline.add(sgie3)
+    pipeline.add(tiler)
     pipeline.add(nvvidconv)
     pipeline.add(nvosd)
     pipeline.add(sink)
@@ -450,7 +467,7 @@ def main(args):
 
     # we link the elements together
     # source_bin -> -> nvh264-decoder -> PGIE -> Tracker
-    # nvvidconv -> nvosd -> video-renderer
+    # tiler -> nvvidconv -> nvosd -> video-renderer
     print("Linking elements in the Pipeline \n")
     
     #source.link(h264parser)
@@ -483,7 +500,8 @@ def main(args):
     tracker.link(sgie1)
     sgie1.link(sgie2)
     sgie2.link(sgie3)
-    sgie3.link(nvvidconv)
+    sgie3.link(tiler)
+    tiler.link(nvvidconv)
     nvvidconv.link(nvosd)
     
     if is_aarch64():
@@ -503,10 +521,17 @@ def main(args):
     # Lets add probe to get informed of the meta data generated, we add probe to
     # the sink pad of the osd element, since by that time, the buffer would have
     # had got all the metadata.
-    osdsinkpad = nvosd.get_static_pad("sink")
-    if not osdsinkpad:
-        sys.stderr.write(" Unable to get sink pad of nvosd \n")
-    osdsinkpad.add_probe(Gst.PadProbeType.BUFFER, osd_sink_pad_buffer_probe, 0)
+    
+    tiler_src_pad = tracker.get_static_pad("src")
+    if not tiler_src_pad:
+        sys.stderr.write(" Unable to get src pad \n")
+    else:
+        tiler_src_pad.add_probe(Gst.PadProbeType.BUFFER, tiler_src_pad_buffer_probe, 0)
+    
+    #osdsinkpad = nvosd.get_static_pad("sink")
+    #if not osdsinkpad:
+    #    sys.stderr.write(" Unable to get sink pad of nvosd \n")
+    #osdsinkpad.add_probe(Gst.PadProbeType.BUFFER, osd_sink_pad_buffer_probe, 0)
 
     print("Starting pipeline \n")
     
