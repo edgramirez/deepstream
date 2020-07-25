@@ -2,6 +2,7 @@ import time
 import os
 import glob
 import json
+import requests
 
 from math import sqrt
 #from sort import *
@@ -49,8 +50,8 @@ def file_exists(file_name):
         return False
 
 
-def open_file(file_name):
-    f = open(file_name, '+a')
+def open_file(file_name, option='a+'):
+    f = open(file_name, option)
     return f
 
 
@@ -114,7 +115,7 @@ def get_service_people_counting_url():
 
 
 def get_service_count_in_and_out_url():
-    return get_server_url() + '/counting_in_and_out'
+    return get_server_url() + '/tx/video-people.endpoint'
 
 
 def get_service_count_intersecting_in_any_direction_url():
@@ -126,14 +127,15 @@ def get_service_social_distance_url():
 
 
 def get_timestamp():
-    return datetime.now().strftime("%y_%m_%d_%H:%M:%S")
+    #return datetime.now().strftime("%y_%m_%d_%H:%M:%S")
+    return str(time.time()).split('.')[0]
 
 
 def set_server_url(url = None):
     global server_url
 
     if url is None:
-        server_url = cfg['server_url']
+        server_url = cfg['server']['url']
     else:
         server_url = url
 
@@ -370,12 +372,50 @@ def read_camera_mac_address():
     set_camera_mac_address(cfg['video']['input']['camera_id'])
 
 
-def send_json(payload, action, url = None):
+def get_headers():
+    token_handler = open_file(file_exists(cfg['server']['token_file']), 'r+')
+    return {'Content-type': 'application/json', 'X-KAIROS-TOKEN': token_handler.read().split('\n')[0]}
+
+
+def send_json(payload, action, url = None, **options):
+    retries = options.get('retries', 5)
+    sleep_time = options.get('sleep_time', 3)
+    expected_response = options.get('expected_response', 200)
 
     if action not in get_supported_actions() or url is None:
         raise Exception('Requested action: ({}) not supported. valid options are:'.format(action, get_supported_actions()))
 
-    print(action, url, json.dumps(payload))
+    for retry in range(retries):
+        try:
+            if action == 'GET':
+                r = requests.get(url, data=json.dumps(payload), headers=get_headers())
+            elif action == 'POST':
+                r = requests.post(url, data=json.dumps(payload), headers=get_headers())
+            elif action == 'PUT':
+                print('aqui', url, json.dumps(payload), get_headers())
+                r = requests.put(url, data=json.dumps(payload), headers=get_headers())
+            else:
+                r = requests.delete(url, data=json.dumps(data), headers=get_headers())
+            print(r)
+        except requests.exceptions.ConnectionError as e:
+            if retry == retries - 1:
+                raise Exception("Unable to Connect to the server after {} retries\n. Original exception".format(retry, str(e)))
+        except requests.exceptions.HTTPError as e:
+            if retry == retries - 1:
+                raise Exception("Invalid HTTP response in {} retries\n. Original exception".format(retry, str(e)))
+        except requests.exceptions.Timeout as e:
+            if retry == retries - 1:
+                raise Exception("Timeout reach in {} retries\n. Original exception".format(retry, str(e)))
+        except requests.exceptions.TooManyRedirects as e:
+            if retry == retries - 1:
+                raise Exception("Too many redirection in {} retries\n. Original exception".format(retry, str(e)))
+
+        #if r.status_code != expected_response:
+        #    time.sleep(sleep_time)
+        #    print('Not the expected return code {}, expecting {}'.format(r.status_code, expected_response))
+
+    # print(action, url, json.dumps(payload))
+    return True
 
 
 def get_file_name(suffix = '', delete_if_created = False):
@@ -414,22 +454,22 @@ def count_in_and_out_when_object_leaves_the_frame(ids):
                 if item not in ids:
                     if initial[item] == 1 and last[item] == 2:
                         data = {
-                                'camera_id': get_camera_mac_address(),
-                                'date_time': get_timestamp(),
-                                'object_id': item,
+                                'id': item,
                                 'direction': get_outside_area() % 2,
+                                'camera-id': get_camera_mac_address(),
+                                '#date-start': get_timestamp(),
+                                '#date-end': get_timestamp(),
                                 }
-                        send_json(data, 'POST', get_service_count_in_and_out_url())
-                        #counter_1_to_2 += 1
+                        send_json(data, 'PUT', get_service_count_in_and_out_url())
                     elif initial[item] == 2 and last[item] == 1:
                         data = {
-                                'camera_id': get_camera_mac_address(),
-                                'date_time': get_timestamp(),
-                                'object_id': item,
+                                'id': item,
                                 'direction': (get_outside_area() + 1) % 2,
+                                'camera-id': get_camera_mac_address(),
+                                '#date-start': get_timestamp(),
+                                '#date-end': get_timestamp(),
                                 }
-                        send_json(data, 'POST', get_service_count_in_and_out_url())
-                        #counter_2_to_1 += 1
+                        send_json(data, 'PUT', get_service_count_in_and_out_url())
                     elements_to_delete.add(item)
        
             for item in elements_to_delete:
@@ -442,7 +482,6 @@ def count_in_and_out_when_object_leaves_the_frame(ids):
             #return counter_1_to_2, counter_2_to_1
 
 
-#def people_counting_storing_fist_time(object_id, first_time_set):
 def people_counting_storing_fist_time(object_id):
     '''
     Storing only the first time the ID appears
@@ -459,7 +498,6 @@ def people_counting_storing_fist_time(object_id):
         first_time_set.add(object_id)
 
 
-#def people_counting_last_time_detected(first_time_set, last_time_set, ids):
 def people_counting_last_time_detected(ids):
     global first_time_set
 
