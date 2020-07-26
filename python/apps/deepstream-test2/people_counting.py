@@ -115,7 +115,7 @@ def get_service_people_counting_url():
 
 
 def get_service_count_in_and_out_url():
-    return get_server_url() + '/tx/video-people.endpoint'
+    return get_server_url() + 'tx/video-people.endpoint'
 
 
 def get_service_count_intersecting_in_any_direction_url():
@@ -128,7 +128,10 @@ def get_service_social_distance_url():
 
 def get_timestamp():
     #return datetime.now().strftime("%y_%m_%d_%H:%M:%S")
-    return str(time.time()).split('.')[0]
+    #print("edgar................", type(int(str(time.time()).split('.')[0]))
+    #print("edgar................", type(time.time()))
+    #return str(time.time()).split('.')[0]
+    return int(time.time())
 
 
 def set_server_url(url = None):
@@ -392,11 +395,9 @@ def send_json(payload, action, url = None, **options):
             elif action == 'POST':
                 r = requests.post(url, data=json.dumps(payload), headers=get_headers())
             elif action == 'PUT':
-                print('aqui', url, json.dumps(payload), get_headers())
                 r = requests.put(url, data=json.dumps(payload), headers=get_headers())
             else:
                 r = requests.delete(url, data=json.dumps(data), headers=get_headers())
-            print(r)
         except requests.exceptions.ConnectionError as e:
             if retry == retries - 1:
                 raise Exception("Unable to Connect to the server after {} retries\n. Original exception".format(retry, str(e)))
