@@ -1,7 +1,7 @@
 config = {
         'server': {
             'url': 'https://mit.kairosconnect.app/api/',
-            'token_file': '/home/edgar/.token',
+            'token_file': '.token',
             },
 
         'business': {

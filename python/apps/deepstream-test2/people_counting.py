@@ -51,8 +51,7 @@ def file_exists(file_name):
 
 
 def open_file(file_name, option='a+'):
-    f = open(file_name, option)
-    return f
+    return open(file_name, option)
 
 
 def api_get_number_of_frames_per_second():
@@ -376,7 +375,8 @@ def read_camera_mac_address():
 
 
 def get_headers():
-    token_handler = open_file(file_exists(cfg['server']['token_file']), 'r+')
+    token_handler = open_file(file_exists(os.getenv("HOME") + '/' + cfg['server']['token_file']), 'r+')
+    #print(token_handler.read().split('\n')[0])
     return {'Content-type': 'application/json', 'X-KAIROS-TOKEN': token_handler.read().split('\n')[0]}
 
 
@@ -431,7 +431,8 @@ def get_file_name(suffix = '', delete_if_created = False):
 
     file_name += datetime.now().strftime("%y") + '_'
     file_name += datetime.now().strftime("%m") + '_'
-    file_name += datetime.now().strftime("%d")
+    file_name += datetime.now().strftime("%d") + '_'
+    file_name += str(time.time())
 
     if delete_if_created and file_exists(file_name):
         create_file(file_name)
