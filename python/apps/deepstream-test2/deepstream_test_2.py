@@ -92,7 +92,7 @@ def osd_sink_pad_buffer_probe(pad, info, u_data):
             #obj_meta.rect_params.left = x - (w / 2)
             #obj_meta.rect_params.width = w
             #obj_meta.rect_params.height = h
-            print('frame number', frame_number, "Id: ", obj_meta.object_id, 'x', obj_meta.rect_params.left + (obj_meta.rect_params.width/2), 'y', obj_meta.rect_params.top + (obj_meta.rect_params.height/2))
+            #edgar print('frame number', frame_number, "Id: ", obj_meta.object_id, 'x', obj_meta.rect_params.left + (obj_meta.rect_params.width/2), 'y', obj_meta.rect_params.top + (obj_meta.rect_params.height/2))
             try: 
                 l_obj = l_obj.next
             except StopIteration:
@@ -226,16 +226,13 @@ def main(args):
     streammux.set_property('height', 1080)
     streammux.set_property('batch-size', 1)
     streammux.set_property('batched-push-timeout', 4000000)
+    path_to_deepstream = "/home/edgar/deepstream_python_v0.9/python/apps/deepstream-test2/dstest2_pgie_config.txt"
 
     # Set properties of pgie and sgie
-    pgie.set_property('config-file-path',
-                      "/home/edgar/deepstream_python_v0.9/python/apps/deepstream-test2/dstest2_pgie_config.txt")
-    sgie1.set_property('config-file-path',
-                       "/home/edgar/deepstream_python_v0.9/python/apps/deepstream-test2/dstest2_sgie1_config.txt")
-    sgie2.set_property('config-file-path',
-                       "/home/edgar/deepstream_python_v0.9/python/apps/deepstream-test2/dstest2_sgie2_config.txt")
-    sgie3.set_property('config-file-path',
-                       "/home/edgar/deepstream_python_v0.9/python/apps/deepstream-test2/dstest2_sgie3_config.txt")
+    pgie.set_property('config-file-path', path_to_deepstream)
+    sgie1.set_property('config-file-path', path_to_deepstream)
+    sgie2.set_property('config-file-path', path_to_deepstream)
+    sgie3.set_property('config-file-path', path_to_deepstream)
 
     # Set properties of tracker
     config = configparser.ConfigParser()
