@@ -546,7 +546,7 @@ def counting_in_and_out_first_detection(box, object_id):
             initial.update({object_id: 1})
         else:
             last.update({object_id: 1})
-    print('object_id', object_id, 'initial: ', initial, 'last:', last)
+    #print('object_id', object_id, 'initial: ', initial, 'last:', last)
 
 
 def get_social_distance_parameter_value(value = None):
