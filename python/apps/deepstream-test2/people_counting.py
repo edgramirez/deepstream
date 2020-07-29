@@ -454,7 +454,7 @@ def count_in_and_out_when_object_leaves_the_frame(ids):
        
             for item in last.keys():
                 if item not in ids:
-                    print('id', item, 'is not int:', ids)
+                    #print('id', item, 'is not int:', ids)
                     if initial[item] == 1 and last[item] == 2:
                         # value #date-end is not needed, just for compatibility we hardcode this value
                         #        'id': str(item),
@@ -464,7 +464,7 @@ def count_in_and_out_when_object_leaves_the_frame(ids):
                                 '#date-start': get_timestamp(),
                                 '#date-end': 1595907644469,
                                 }
-                        print('in sending_json........', item, get_outside_area() % 2)
+                       # print('in sending_json........', item, get_outside_area() % 2)
                         #send_json(data, 'PUT', get_service_count_in_and_out_url())
                     elif initial[item] == 2 and last[item] == 1:
                         #        'id': str(item),
@@ -474,7 +474,7 @@ def count_in_and_out_when_object_leaves_the_frame(ids):
                                 '#date-start': get_timestamp(),
                                 '#date-end': 1595907644469,
                                 }
-                        print('out sending_json........', item, (get_outside_area() + 1) % 2)
+                        #print('out sending_json........', item, (get_outside_area() + 1) % 2)
                         #send_json(data, 'PUT', get_service_count_in_and_out_url())
                     initial.pop(item)
                     elements_to_delete.add(item)
