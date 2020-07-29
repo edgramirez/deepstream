@@ -130,7 +130,7 @@ def get_timestamp():
     #print("edgar................", type(int(str(time.time()).split('.')[0]))
     #print("edgar................", type(time.time()))
     #return str(time.time()).split('.')[0]
-    return int(time.time())
+    return int(time.time() * 1000)
 
 
 def set_server_url(url = None):
@@ -445,7 +445,7 @@ def count_in_and_out_when_object_leaves_the_frame(ids):
     The area A1 is the one closer to the point (0,0)
     Area A1 is by default outside 
     Area A2 is by default inside 
-    (this can be modified by setting up the config parameter "outside_area" to 1, by default is 2)
+    ** This could be modified by setting up the configuration parameter "outside_area" to 2, (by default is 1)
     '''
     if counting_in_and_out['enabled']:
         if frameIndex % counting_in_and_out['report_frequency'] == 0:
@@ -454,28 +454,33 @@ def count_in_and_out_when_object_leaves_the_frame(ids):
        
             for item in last.keys():
                 if item not in ids:
+                    print('id', item, 'is not int:', ids)
                     if initial[item] == 1 and last[item] == 2:
+                        # value #date-end is not needed, just for compatibility we hardcode this value
+                        #        'id': str(item),
                         data = {
-                                'id': item,
                                 'direction': get_outside_area() % 2,
-                                'camera-id': get_camera_mac_address(),
+                                'camera-id': camera_id,
                                 '#date-start': get_timestamp(),
-                                '#date-end': get_timestamp(),
+                                '#date-end': 1595907644469,
                                 }
-                        send_json(data, 'PUT', get_service_count_in_and_out_url())
+                        print('in sending_json........', item, get_outside_area() % 2)
+                        #send_json(data, 'PUT', get_service_count_in_and_out_url())
                     elif initial[item] == 2 and last[item] == 1:
+                        #        'id': str(item),
                         data = {
-                                'id': item,
                                 'direction': (get_outside_area() + 1) % 2,
-                                'camera-id': get_camera_mac_address(),
+                                'camera-id': camera_id,
                                 '#date-start': get_timestamp(),
-                                '#date-end': get_timestamp(),
+                                '#date-end': 1595907644469,
                                 }
-                        send_json(data, 'PUT', get_service_count_in_and_out_url())
+                        print('out sending_json........', item, (get_outside_area() + 1) % 2)
+                        #send_json(data, 'PUT', get_service_count_in_and_out_url())
+                    initial.pop(item)
                     elements_to_delete.add(item)
+                    #print('elements to delete', elements_to_delete)
        
             for item in elements_to_delete:
-                initial.pop(item)
                 last.pop(item)
        
             #content = f"{str(frameIndex)} in:{str(counter_1_to_2)} out:{counter_2_to_1}\n"
@@ -521,8 +526,8 @@ def counting_in_and_out_first_detection(box, object_id):
     '''
     A1 is the closest to the origin (0,0) and A2 is the area after the reference line
     A1 is by default the outside
-    A2 is by default the inside 
-    This can be changed by modifying the configuration variable "outside_area" to 2
+    A2 is by default the inside
+    This can be changed by modifying the configuration variable "outside_area" to 2 (by default 1)
     '''
     if not counting_in_and_out['enabled']:
         return
@@ -530,7 +535,7 @@ def counting_in_and_out_first_detection(box, object_id):
     x = box[0]
     y = box[1]
 
-    #print('initial: ', initial, 'last: ', last, 'id: ', object_id)
+    # returns True if object is in area A2
     if check_if_object_in_area2((x, y), line1):
         if object_id not in initial:
             initial.update({object_id: 2})
@@ -541,6 +546,7 @@ def counting_in_and_out_first_detection(box, object_id):
             initial.update({object_id: 1})
         else:
             last.update({object_id: 1})
+    print('object_id', object_id, 'initial: ', initial, 'last:', last)
 
 
 def get_social_distance_parameter_value(value = None):
