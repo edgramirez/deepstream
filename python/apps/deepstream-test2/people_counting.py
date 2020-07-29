@@ -528,15 +528,15 @@ def counting_in_and_out_first_detection(box, object_id):
     A1 is by default the outside
     A2 is by default the inside
     This can be changed by modifying the configuration variable "outside_area" to 2 (by default 1)
+    x = box[0]
+    y = box[1]
     '''
     if not counting_in_and_out['enabled']:
         return
 
-    x = box[0]
-    y = box[1]
 
     # returns True if object is in area A2
-    if check_if_object_in_area2((x, y), line1):
+    if check_if_object_in_area2(box, line1):
         if object_id not in initial:
             initial.update({object_id: 2})
         else:
