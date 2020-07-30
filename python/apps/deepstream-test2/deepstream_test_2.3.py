@@ -124,15 +124,15 @@ def tiler_src_pad_buffer_probe(pad, info, u_data):
             obj_id = obj_meta.object_id
 
             # Service Aforo (in and out)
-            pc.counting_in_and_out_first_detection((x, y), obj_id)
             ids.append(obj_id)
             boxes.append((x, y))
+            #pc.counting_in_and_out_first_detection((x, y), obj_id)
+            pc.counting_in_and_out_when_changing_area((x, y), obj_id, ids, previous)
 
             # Service People counting
             if previous:
                 pc.people_counting_last_time_detected(ids)
                 pc.people_counting_storing_fist_time(obj_id)
-
             try: 
                 l_obj = l_obj.next
             except StopIteration:
@@ -142,11 +142,12 @@ def tiler_src_pad_buffer_probe(pad, info, u_data):
         if previous:
             pc.get_distances_between_detected_elements_from_centroid(boxes, ids)
 
-        pc.set_previous(True)
-        previous = pc.get_previous()
+        if not pc.get_previous():
+            pc.set_previous(True)
+            previous = pc.get_previous()
         
         # Service Aforo (in and out)
-        pc.count_in_and_out_when_object_leaves_the_frame(ids)
+        #pc.count_in_and_out_when_object_leaves_the_frame(ids)
 
         # Acquiring a display meta object. The memory ownership remains in
         # the C code so downstream plugins can still access it. Otherwise

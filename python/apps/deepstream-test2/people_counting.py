@@ -126,10 +126,6 @@ def get_service_social_distance_url():
 
 
 def get_timestamp():
-    #return datetime.now().strftime("%y_%m_%d_%H:%M:%S")
-    #print("edgar................", type(int(str(time.time()).split('.')[0]))
-    #print("edgar................", type(time.time()))
-    #return str(time.time()).split('.')[0]
     return int(time.time() * 1000)
 
 
@@ -464,7 +460,7 @@ def count_in_and_out_when_object_leaves_the_frame(ids):
                                 '#date-start': get_timestamp(),
                                 '#date-end': 1595907644469,
                                 }
-                       # print('in sending_json........', item, get_outside_area() % 2)
+                        print('in sending_json........', item, get_outside_area() % 2)
                         #send_json(data, 'PUT', get_service_count_in_and_out_url())
                     elif initial[item] == 2 and last[item] == 1:
                         #        'id': str(item),
@@ -474,7 +470,7 @@ def count_in_and_out_when_object_leaves_the_frame(ids):
                                 '#date-start': get_timestamp(),
                                 '#date-end': 1595907644469,
                                 }
-                        #print('out sending_json........', item, (get_outside_area() + 1) % 2)
+                        print('out sending_json........', item, (get_outside_area() + 1) % 2)
                         #send_json(data, 'PUT', get_service_count_in_and_out_url())
                     initial.pop(item)
                     elements_to_delete.add(item)
@@ -534,7 +530,6 @@ def counting_in_and_out_first_detection(box, object_id):
     if not counting_in_and_out['enabled']:
         return
 
-
     # returns True if object is in area A2
     if check_if_object_in_area2(box, line1):
         if object_id not in initial:
@@ -546,7 +541,70 @@ def counting_in_and_out_first_detection(box, object_id):
             initial.update({object_id: 1})
         else:
             last.update({object_id: 1})
-    #print('object_id', object_id, 'initial: ', initial, 'last:', last)
+
+
+def counting_in_and_out_when_changing_area(box, object_id, ids, previous):
+    '''
+    A1 is the closest to the origin (0,0) and A2 is the area after the reference line
+    A1 is by default the outside
+    A2 is by default the inside
+    This can be changed by modifying the configuration variable "outside_area" to 2 (by default 1)
+    x = box[0]
+    y = box[1]
+    '''
+    if counting_in_and_out['enabled']:
+        # returns True if object is in area A2
+        if check_if_object_in_area2(box, line1):
+            area = 2
+        else:
+            area = 1
+
+        if object_id not in initial:
+            initial.update({object_id: area})
+        else:
+            last.update({object_id: area})
+
+        if previous and (frameIndex % counting_in_and_out['report_frequency']) == 0:
+            elements_to_delete = set()
+            camera_id = get_camera_mac_address()
+
+            for item in last.keys():
+                if initial[item] == 1 and last[item] == 2:
+                    data = {
+                            'direction': (get_outside_area() + 1) % 2,
+                            'camera-id': camera_id,
+                            '#date-start': get_timestamp(),
+                            '#date-end': 1595907644469,
+                            }
+                    print('out if area 1 is inside sending_json........', item, (get_outside_area() + 1) % 2)
+
+                    # deleting elements that are no longer present in the list of ids
+                    if item not in ids:
+                        elements_to_delete.add(item)
+                        initial.pop(item)
+                    else:
+                        initial.update({item: 2})
+
+                elif initial[item] == 2 and last[item] == 1:
+                    data = {
+                            'direction': get_outside_area() % 2,
+                            'camera-id': camera_id,
+                            '#date-start': get_timestamp(),
+                            '#date-end': 1595907644469,
+                            }
+                    print('in if area 1 is inside sending_json........', item, get_outside_area() % 2)
+
+                    # deleting elements that are no longer present in the list of ids
+                    if item not in ids:
+                        elements_to_delete.add(item)
+                        initial.pop(item)
+                    else:
+                        initial.update({item: 1})
+
+            # deleting elements that are no longer present in the list of ids
+            for item in elements_to_delete:
+                last.pop(item)
+
 
 
 def get_social_distance_parameter_value(value = None):
